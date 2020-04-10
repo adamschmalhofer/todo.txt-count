@@ -14,6 +14,8 @@ function usage {
   echo "      mark NUM items as done at once and re-enter it with -NUM count"
   echo "    count ITEM +NUM"
   echo "      mark NUM items as done at once and re-enter it with +NUM count"
+  echo "    count ITEM =NUM"
+  echo "      mark NUM items as done at once and re-enter it with NUM count"
 }
 
 function error {
@@ -40,7 +42,11 @@ function dodec {
   COUNT="$3"
   CHANGE_BY="$4"
 
-  NEW_COUNT=$(($COUNT $CHANGE_BY ))
+  if [[ "$CHANGE_BY" =~ =.* ]]; then
+    NEW_COUNT=${CHANGE_BY/=/}
+  else
+    NEW_COUNT=$(($COUNT $CHANGE_BY ))
+  fi
   NEW_LINE=$(echo $LINE | sed "s/count:[[:digit:]]\\+/count:$NEW_COUNT/")
 
   if [[ "$LINE" != "" ]]; then
@@ -82,7 +88,7 @@ case $cmd in
   done|do)
     dodec "$ITEM" "$LINE" "$COUNT" "-1" || error
     ;;
-  [+-]+([0-9]))
+  [=+-]+([0-9]))
     dodec "$ITEM" "$LINE" "$COUNT" "$cmd" || error
     ;;
   *)
