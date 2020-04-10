@@ -7,6 +7,8 @@ function usage {
   echo "      show how many of this item is left"
   echo "    count ITEM done"
   echo "      mark an item done and then re-enter it with a decreased (-1) count"
+  echo "    count ITEM do"
+  echo "      alias for count ITEM done"
   echo "    count ITEM -NUM"
   echo "      mark NUM items as done at once and re-enter it with -NUM count"
 }
@@ -77,7 +79,7 @@ case $cmd in
   '')
     print-count "$ITEM" "$LINE" "$COUNT" || error
     ;;
-  done)
+  done|do)
     dodec "$ITEM" "$LINE" "$COUNT" || error
     ;;
   *)
