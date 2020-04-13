@@ -50,7 +50,7 @@ function dodec {
   NEW_LINE=$(echo $LINE | sed "s/count:[[:digit:]]\\+/count:$NEW_COUNT/")
 
   if [[ "$LINE" != "" ]]; then
-    "$TODO_FULL_SH" command do "$ITEM"
+    "$TODO_FULL_SH" command "do" "$ITEM"
     if [ $NEW_COUNT -gt 0 ]; then
       "$TODO_FULL_SH" command add "$NEW_LINE"
     fi
