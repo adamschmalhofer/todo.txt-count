@@ -73,7 +73,7 @@ fi
 LINE=$(sed "$ITEM!d" "$TODO_FILE")
 
 if echo "$LINE" | grep 'count:' &>/dev/null; then
-  COUNT=$(echo "$LINE" | sed 's/.*count:\([[:digit:]]\+.*\)/\1/')
+  COUNT=$(echo "$LINE" | sed 's/.*count:\([[:digit:]]\+\).*/\1/')
 else
   COUNT=1
 fi
