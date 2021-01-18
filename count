@@ -1,98 +1,74 @@
-#!/bin/bash
-shopt -s extglob
+#!/usr/bin/python3
 
-function usage {
-  echo "    count help"
-  echo "      show help information"
-  echo "    count ITEM"
-  echo "      show how many of this item is left"
-  echo "    count ITEM done"
-  echo "      mark an item done and then re-enter it with a decreased (-1) count"
-  echo "    count ITEM do"
-  echo "      alias for count ITEM done"
-  echo "    count ITEM -NUM"
-  echo "      mark NUM items as done at once and re-enter it with -NUM count"
-  echo "    count ITEM +NUM"
-  echo "      mark NUM items as done at once and re-enter it with +NUM count"
-  echo "    count ITEM =NUM"
-  echo "      mark NUM items as done at once and re-enter it with NUM count"
-}
+from sys import exit, argv
+from re import sub, search, match
+from subprocess import run
+from os import environ
 
-function error {
-  echo "Error! Usage:"
-  usage
-  exit 1
-}
 
-function print-count {
-  ITEM="$1"
-  LINE="$2"
-  COUNT="$3"
+def usage():
+    print("""  Handle count metadata in a todo item:
+    count help
+      show help information
+    count ITEM
+      show how many of this item is left
+    count ITEM done
+      mark an item done and then re-enter it with a decreased (-1) count
+    count ITEM do
+      alias for count ITEM done
+    count ITEM -NUM
+      mark NUM items as done at once and re-enter it with -NUM count
+    count ITEM +NUM
+      mark NUM items as done at once and re-enter it with +NUM count
+    count ITEM =NUM
+      mark NUM items as done at once and re-enter it with NUM count""")
 
-  if [ ! -z "$LINE" ]; then
-    printf "%d\n" "$COUNT"
-  else
-    return 1
-  fi
-}
 
-function dodec {
-  ITEM="$1"
-  LINE="$2"
-  COUNT="$3"
-  CHANGE_BY="$4"
+def error():
+    print("Error! Usage:")
+    usage()
+    exit(1)
 
-  if [[ "$CHANGE_BY" =~ =.* ]]; then
-    NEW_COUNT=${CHANGE_BY/=/}
-  else
-    NEW_COUNT=$(($COUNT $CHANGE_BY ))
-  fi
-  NEW_LINE=$(echo $LINE | sed "s/count:[[:digit:]]\\+/count:$NEW_COUNT/")
 
-  if [[ "$LINE" != "" ]]; then
-    "$TODO_FULL_SH" command "do" "$ITEM"
-    if [ $NEW_COUNT -gt 0 ]; then
-      "$TODO_FULL_SH" command add "$NEW_LINE"
-    fi
-  fi
-}
+def print_count(ITEM, LINE, COUNT):
+    if len(LINE.strip()) > 0:
+        print(COUNT)
+    else:
+        error()
 
-[ "$1" = "usage" ] && usage && exit
 
-shift
+def dodec(ITEM, LINE, COUNT, NEW_COUNT):
+    NEW_LINE = sub("count:[0-9]+", f"count:{NEW_COUNT}", LINE)
+    if len(LINE.strip()) > 0:
+        run([environ["TODO_FULL_SH"], "command", "do", str(ITEM)])
+        if NEW_COUNT > 0:
+            run([environ["TODO_FULL_SH"], "command", "add", NEW_LINE])
 
-[ "$1" = "help" ] &&
-  echo "Handle count metadata in a todo item:" &&
-  usage && exit
 
-ITEM=$1
-if ! [[ "$ITEM" =~ ^[0-9]+$ ]]; then
-  error
-fi
+if argv[1] == 'usage' or argv[2] == 'usage':
+    usage()
+    exit()
 
-LINE=$(sed "$ITEM!d" "$TODO_FILE")
 
-if echo "$LINE" | grep 'count:' &>/dev/null; then
-  COUNT=$(echo "$LINE" | sed 's/.*count:\([[:digit:]]\+\).*/\1/')
-else
-  COUNT=1
-fi
+ITEM = int(argv[2])
 
-shift
-cmd=$1
+with open(environ["TODO_FILE"]) as f:
+    LINE = f.readlines()[ITEM-1]
 
-case $cmd in
-  '')
-    print-count "$ITEM" "$LINE" "$COUNT" || error
-    ;;
-  done|do)
-    dodec "$ITEM" "$LINE" "$COUNT" "-1" || error
-    ;;
-  [=+-]+([0-9]))
-    dodec "$ITEM" "$LINE" "$COUNT" "$cmd" || error
-    ;;
-  *)
-    error
-    ;;
-esac
+m = search('count:([0-9]+)', LINE)
+COUNT = (int(m.group(1)) if m is not None else 1)
 
+if len(argv) <= 3:
+    print_count(ITEM, LINE, COUNT)
+    exit()
+
+if argv[3] in ['done', 'do']:
+    dodec(ITEM, LINE, COUNT, COUNT-1)
+    exit()
+if argv[3].startswith('='):
+    dodec(ITEM, LINE, COUNT, int(argv[3].strip('= ')))
+    exit()
+if match('^[-+][0-9]+$', argv[3]):
+    dodec(ITEM, LINE, COUNT, eval(str(COUNT) + argv[3]))
+    exit()
+error()
